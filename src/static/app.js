@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (details.participants && details.participants.length > 0) {
           details.participants.forEach((p) => {
-            // create participant item with avatar (initials) + full name
+            // create participant item with avatar (initials) + full name + delete icon
             const li = document.createElement("li");
             li.className = "participant-item";
             li.setAttribute("role", "listitem");
@@ -66,8 +66,43 @@ document.addEventListener("DOMContentLoaded", () => {
             nameSpan.className = "participant-name";
             nameSpan.textContent = p;
 
+            // delete button (icon)
+            const delBtn = document.createElement("button");
+            delBtn.className = "participant-delete";
+            delBtn.setAttribute("aria-label", `Unregister ${p} from ${name}`);
+            delBtn.title = "Unregister participant";
+            delBtn.innerHTML = "&times;"; // simple × icon
+
+            // click handler to unregister
+            delBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              try {
+                const res = await fetch(
+                  `/activities/${encodeURIComponent(name)}/participants?email=${encodeURIComponent(p)}`,
+                  { method: "DELETE" }
+                );
+
+                const json = await res.json();
+                if (res.ok) {
+                  // remove the li from the DOM
+                  li.remove();
+                  // update the participant count badge
+                  const countSpan = activityCard.querySelector(".participant-count");
+                  if (countSpan) {
+                    const current = parseInt(countSpan.textContent.replace(/[^0-9]/g, ""), 10) || 0;
+                    countSpan.textContent = `(${Math.max(0, current - 1)})`;
+                  }
+                } else {
+                  console.error('Failed to unregister:', json.detail || json);
+                }
+              } catch (err) {
+                console.error("Error unregistering participant:", err);
+              }
+            });
+
             li.appendChild(avatar);
             li.appendChild(nameSpan);
+            li.appendChild(delBtn);
             ul.appendChild(li);
           });
         } else {
